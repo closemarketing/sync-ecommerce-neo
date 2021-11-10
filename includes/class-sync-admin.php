@@ -87,23 +87,22 @@ class SYNC_Admin
         ?>
 
 			<h2 class="nav-tab-wrapper">
-				<a href="?page=<?php 
-        echo  'import_' . esc_html( 'sync-ecommerce-neo' ) ;
-        ?>&tab=sync" class="nav-tab <?php 
+				<a href="?page=import_sync-ecommerce-neo&tab=sync" class="nav-tab <?php 
         echo  ( 'sync' === $active_tab ? 'nav-tab-active' : '' ) ;
         ?>"><?php 
         esc_html_e( 'Manual Synchronization', 'sync-ecommerce-neo' );
         ?></a>
-				<a href="?page=<?php 
-        echo  'import_' . esc_html( 'sync-ecommerce-neo' ) ;
-        ?>&tab=automate" class="nav-tab <?php 
+				<a href="?page=import_sync-ecommerce-neo&tab=orders" class="nav-tab <?php 
+        echo  ( 'orders' === $active_tab ? 'nav-tab-active' : '' ) ;
+        ?>"><?php 
+        esc_html_e( 'Sync Orders', 'sync-ecommerce-neo' );
+        ?></a>
+				<a href="?page=import_sync-ecommerce-neo&tab=automate" class="nav-tab <?php 
         echo  ( 'automate' === $active_tab ? 'nav-tab-active' : '' ) ;
         ?>"><?php 
         esc_html_e( 'Automate', 'sync-ecommerce-neo' );
         ?></a>
-				<a href="?page=<?php 
-        echo  'import_' . esc_html( 'sync-ecommerce-neo' ) ;
-        ?>&tab=settings" class="nav-tab <?php 
+				<a href="?page=import_sync-ecommerce-neo&tab=settings" class="nav-tab <?php 
         echo  ( 'settings' === $active_tab ? 'nav-tab-active' : '' ) ;
         ?>"><?php 
         esc_html_e( 'Settings', 'sync-ecommerce-neo' );
@@ -147,10 +146,20 @@ class SYNC_Admin
         }
         
         ?>
+			<?php 
+        if ( 'orders' === $active_tab ) {
+            $this->page_sync_orders();
+        }
+        ?>
 		</div>
 		<?php 
     }
     
+    /**
+     * Test connection
+     *
+     * @return void
+     */
     public function test_connection()
     {
         $token = sync_get_token( true );
@@ -220,13 +229,7 @@ class SYNC_Admin
             'import-neo-admin',
             'import_neo_setting_section'
         );
-        add_settings_field(
-            'wcsen_filter',
-            __( 'Filter products by tag?', 'sync-ecommerce-neo' ),
-            array( $this, 'wcsen_filter_callback' ),
-            'import-neo-admin',
-            'import_neo_setting_section'
-        );
+        $name_nif = __( 'Meta key for Billing NIF?', 'sync-ecommerce-neo' );
         $name_catnp = __( 'Import category only in new products?', 'sync-ecommerce-neo' );
         /**
          * # Automate
@@ -237,6 +240,15 @@ class SYNC_Admin
             array( $this, 'import_neo_section_automate' ),
             'import-neo-automate'
         );
+        $name_sync = __( 'When do you want to sync articles?', 'sync-ecommerce-neo' );
+        $name_sync_stk = __( 'When do you want to sync stock?', 'sync-ecommerce-neo' );
+    }
+    
+    public function page_sync_orders()
+    {
+        echo  '<h2>' . __( 'Synchronize Orders', 'sync-ecommerce-neo' ) . '</h2>' ;
+        echo  '<p>' . __( 'Synchronize previous orders in "Completed" status with your NEO ERP.', 'sync-ecommerce-neo' ) . '</p>' ;
+        echo  '<button class="button-secondary" type="button" name="wcsen_customize_button" id="wcsen_customize_button" style="" onclick="syncNEOOrders();">Sync</button>' ;
     }
     
     /**
@@ -281,13 +293,21 @@ class SYNC_Admin
             if ( isset( $input[PLUGIN_PREFIX . 'catnp'] ) ) {
                 $sanitary_values[PLUGIN_PREFIX . 'catnp'] = $input[PLUGIN_PREFIX . 'catnp'];
             }
+            if ( isset( $input[PLUGIN_PREFIX . 'billing_key'] ) ) {
+                $sanitary_values[PLUGIN_PREFIX . 'billing_key'] = $input[PLUGIN_PREFIX . 'billing_key'];
+            }
             // Other tab.
             $sanitary_values[PLUGIN_PREFIX . 'sync'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'sync'] ) ? $sync_settings[PLUGIN_PREFIX . 'sync'] : 'no' );
+            $sanitary_values[PLUGIN_PREFIX . 'sync_stk'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'sync_stk'] ) ? $sync_settings[PLUGIN_PREFIX . 'sync_stk'] : 'no' );
             $sanitary_values[PLUGIN_PREFIX . 'sync_email'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'sync_email'] ) ? $sync_settings[PLUGIN_PREFIX . 'sync_email'] : 'yes' );
+            $sanitary_values[PLUGIN_PREFIX . 'billing_key'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'billing_key'] ) ? $sync_settings[PLUGIN_PREFIX . 'billing_key'] : '_billing_vat' );
         } elseif ( isset( $_POST['submit_automate'] ) ) {
+            
             if ( isset( $input[PLUGIN_PREFIX . 'sync'] ) ) {
                 $sanitary_values[PLUGIN_PREFIX . 'sync'] = $input[PLUGIN_PREFIX . 'sync'];
+                $sanitary_values[PLUGIN_PREFIX . 'sync_stk'] = $input[PLUGIN_PREFIX . 'sync_stk'];
             }
+            
             if ( isset( $input[PLUGIN_PREFIX . 'sync_email'] ) ) {
                 $sanitary_values[PLUGIN_PREFIX . 'sync_email'] = $input[PLUGIN_PREFIX . 'sync_email'];
             }
@@ -302,6 +322,7 @@ class SYNC_Admin
             $sanitary_values[PLUGIN_PREFIX . 'filter'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'filter'] ) ? $sync_settings[PLUGIN_PREFIX . 'filter'] : '' );
             $sanitary_values[PLUGIN_PREFIX . 'rates'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'rates'] ) ? $sync_settings[PLUGIN_PREFIX . 'rates'] : 'default' );
             $sanitary_values[PLUGIN_PREFIX . 'catnp'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'catnp'] ) ? $sync_settings[PLUGIN_PREFIX . 'catnp'] : 'yes' );
+            $sanitary_values[PLUGIN_PREFIX . 'billing_key'] = ( isset( $sync_settings[PLUGIN_PREFIX . 'billing_key'] ) ? $sync_settings[PLUGIN_PREFIX . 'billing_key'] : '_billing_vat' );
         }
         
         return $sanitary_values;
@@ -311,7 +332,7 @@ class SYNC_Admin
     {
         // Purchase notification.
         $purchase_url = 'https://checkout.freemius.com/mode/dialog/plugin/5133/plan/8469/';
-        $get_pro = sprintf( wp_kses( __( '<a href="%s">Get Pro version</a> to enable', 'sync-ecommerce-neo' ), array(
+        $get_pro = sprintf( wp_kses( __( ' <a href="%s">Get Pro version</a> to enable', 'sync-ecommerce-neo' ), array(
             'a' => array(
             'href'   => array(),
             'target' => array(),
@@ -326,6 +347,17 @@ class SYNC_Admin
      * @return void
      */
     public function import_neo_section_automate()
+    {
+        esc_html_e( 'Section only for Premium version', 'sync-ecommerce-neo' );
+        echo  $this->show_get_premium() ;
+    }
+    
+    /**
+     * Info for neo section.
+     *
+     * @return void
+     */
+    public function import_neo_section_orders()
     {
         esc_html_e( 'Section only for Premium version', 'sync-ecommerce-neo' );
         echo  $this->show_get_premium() ;
@@ -509,21 +541,16 @@ class SYNC_Admin
 		<?php 
     }
     
-    public function wcsen_filter_callback()
+    public function wcsen_properties_callback()
     {
-        printf( '<input class="regular-text" type="text" name="' . PLUGIN_OPTIONS . '[' . PLUGIN_PREFIX . 'filter]" id="wcsen_filter" value="%s">', ( isset( $this->sync_settings[PLUGIN_PREFIX . 'filter'] ) ? esc_attr( $this->sync_settings[PLUGIN_PREFIX . 'filter'] ) : '' ) );
-    }
-    
-    public function wcsen_rates_callback()
-    {
-        $rates_options = $this->get_rates();
-        if ( false == $rates_options ) {
+        $properties_options = sync_get_properties_order();
+        if ( false == $properties_options ) {
             return false;
         }
         ?>
 		<select name="' . PLUGIN_OPTIONS . '[' . PLUGIN_PREFIX . 'rates]" id="wcsen_rates">
 			<?php 
-        foreach ( $rates_options as $value => $label ) {
+        foreach ( $properties_options as $value => $label ) {
             $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'rates'] ) && $this->sync_settings[PLUGIN_PREFIX . 'rates'] === $value ? 'selected' : '' );
             echo  '<option value="' . esc_html( $value ) . '" ' . esc_html( $selected ) . '>' . esc_html( $label ) . '</option>' ;
         }
@@ -563,6 +590,7 @@ class SYNC_Admin
      */
     public function wcsen_sync_callback()
     {
+        global  $cron_options ;
         ?>
 		<select name="<?php 
         echo  PLUGIN_OPTIONS . '[' . PLUGIN_PREFIX . 'sync]' ;
@@ -577,94 +605,46 @@ class SYNC_Admin
         ?>><?php 
         esc_html_e( 'No', 'sync-ecommerce-neo' );
         ?></option>
-
 			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_daily' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
+        foreach ( $cron_options as $cron_option ) {
+            $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && $cron_option['cron'] === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
+            echo  '<option value="' . esc_html( $cron_option['cron'] ) . '" ' . esc_html( $selected ) . '>' ;
+            echo  esc_html( $cron_option['display'] ) . '</option>' ;
+        }
         ?>
-			<option value="<?php 
+		</select>
+		<?php 
+    }
+    
+    /**
+     * Callback sync field.
+     *
+     * @return void
+     */
+    public function wcsen_sync_stk_callback()
+    {
+        global  $cron_options ;
+        ?>
+		<select name="<?php 
+        echo  PLUGIN_OPTIONS . '[' . PLUGIN_PREFIX . 'sync_stk]' ;
+        ?>" id="<?php 
         echo  PLUGIN_PREFIX ;
-        ?>cron_daily" <?php 
+        ?>sync">
+			<?php 
+        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync_stk'] ) && 'no' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
+        ?>
+			<option value="no" <?php 
         echo  esc_html( $selected ) ;
         ?>><?php 
-        esc_html_e( 'Every day', 'sync-ecommerce-neo' );
+        esc_html_e( 'No', 'sync-ecommerce-neo' );
         ?></option>
-
 			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_twelve_hours' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
+        foreach ( $cron_options as $cron_option ) {
+            $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync_stk'] ) && $cron_option['cron'] === $this->sync_settings[PLUGIN_PREFIX . 'sync_stk'] ? 'selected' : '' );
+            echo  '<option value="' . esc_html( $cron_option['cron'] ) . '" ' . esc_html( $selected ) . '>' ;
+            echo  esc_html( $cron_option['display'] ) . '</option>' ;
+        }
         ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_twelve_hours" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every twelve hours', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_six_hours' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_six_hours" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every six hours', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_three_hours' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_three_hours" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every three hours', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_one_hour' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_one_hour" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every hour', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_thirty_minutes' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_thirty_minutes" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every thirty minutes', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_fifteen_minutes' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_fifteen_minutes" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every fifteen minutes', 'sync-ecommerce-neo' );
-        ?></option>
-
-			<?php 
-        $selected = ( isset( $this->sync_settings[PLUGIN_PREFIX . 'sync'] ) && PLUGIN_PREFIX . 'cron_five_minutes' === $this->sync_settings[PLUGIN_PREFIX . 'sync'] ? 'selected' : '' );
-        ?>
-			<option value="<?php 
-        echo  PLUGIN_PREFIX ;
-        ?>cron_five_minutes" <?php 
-        echo  esc_html( $selected ) ;
-        ?>><?php 
-        esc_html_e( 'Every five minutes', 'sync-ecommerce-neo' );
-        ?></option>
 		</select>
 		<?php 
     }
@@ -693,6 +673,11 @@ class SYNC_Admin
         ?></option>
 		</select>
 		<?php 
+    }
+    
+    public function wcsen_billing_nif_callback()
+    {
+        printf( '<input class="regular-text" type="text" name="' . PLUGIN_OPTIONS . '[' . PLUGIN_PREFIX . 'billing_key]" id="' . PLUGIN_PREFIX . 'billing_key" value="%s">', ( isset( $this->sync_settings[PLUGIN_PREFIX . 'billing_key'] ) ? esc_attr( $this->sync_settings[PLUGIN_PREFIX . 'billing_key'] ) : '' ) );
     }
     
     /**

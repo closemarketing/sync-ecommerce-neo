@@ -6,7 +6,7 @@
  * Description: Imports Products and data from NEO to WooCommerce.
  * Author: closemarketing
  * Author URI: https://www.closemarketing.es/
- * Version: 1.1
+ * Version: 1.4
  *
  * @package WordPress
  * Text Domain: sync-ecommerce-neo
@@ -15,7 +15,7 @@
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
 defined( 'ABSPATH' ) || exit;
-define( 'WCSEN_VERSION', '1.1' );
+define( 'WCSEN_VERSION', '1.4' );
 define( 'WCSEN_PLUGIN', __FILE__ );
 define( 'WCSEN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WCSEN_PLUGIN_DIR', untrailingslashit( dirname( WCSEN_PLUGIN ) ) );
@@ -34,10 +34,6 @@ function wcsen_load_textdomain()
     load_plugin_textdomain( 'sync-ecommerce-neo', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 }
 
-// Includes files.
-require_once dirname( __FILE__ ) . '/includes/helpers-functions.php';
-require_once dirname( __FILE__ ) . '/includes/class-sync-admin.php';
-require_once dirname( __FILE__ ) . '/includes/class-sync-import.php';
 
 if ( function_exists( 'cmk_fs' ) ) {
     cmk_fs()->set_basename( false, __FILE__ );
@@ -90,46 +86,10 @@ if ( function_exists( 'cmk_fs' ) ) {
 
 }
 
-add_filter( 'cron_schedules', 'wcsen_add_cron_recurrence_interval' );
-/**
- * Adds a cron Schedule
- *
- * @param array $schedules Array of Schedules.
- * @return array $schedules
- */
-function wcsen_add_cron_recurrence_interval( $schedules )
-{
-    $schedules['every_five_minutes'] = array(
-        'interval' => 300,
-        'display'  => __( 'Every 5 minutes', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_fifteen_minutes'] = array(
-        'interval' => 900,
-        'display'  => __( 'Every 15 minutes', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_thirty_minutes'] = array(
-        'interval' => 1800,
-        'display'  => __( 'Every 30 Minutes', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_one_hour'] = array(
-        'interval' => 3600,
-        'display'  => __( 'Every 1 Hour', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_three_hours'] = array(
-        'interval' => 10800,
-        'display'  => __( 'Every 3 Hours', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_six_hours'] = array(
-        'interval' => 21600,
-        'display'  => __( 'Every 6 Hours', 'sync-ecommerce-neo' ),
-    );
-    $schedules['every_twelve_hours'] = array(
-        'interval' => 43200,
-        'display'  => __( 'Every 12 Hours', 'sync-ecommerce-neo' ),
-    );
-    return $schedules;
-}
-
+// Includes files.
+require_once dirname( __FILE__ ) . '/includes/helpers-functions.php';
+require_once dirname( __FILE__ ) . '/includes/class-sync-admin.php';
+require_once dirname( __FILE__ ) . '/includes/class-sync-import.php';
 register_activation_hook( __FILE__, 'wcsen_create_db' );
 /**
  * Creates the database
