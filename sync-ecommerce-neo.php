@@ -1,12 +1,11 @@
 <?php
-
 /**
  * Plugin Name: Sync eCommerce NEO
  * Plugin URI: https://www.closemarketing.es
  * Description: Imports Products and data from NEO to WooCommerce.
  * Author: closemarketing
  * Author URI: https://www.closemarketing.es/
- * Version: 1.4
+ * Version: 1.4.1
  *
  * @package WordPress
  * Text Domain: sync-ecommerce-neo
@@ -15,7 +14,7 @@
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
 defined( 'ABSPATH' ) || exit;
-define( 'WCSEN_VERSION', '1.4' );
+define( 'WCSEN_VERSION', '1.4.1' );
 define( 'WCSEN_PLUGIN', __FILE__ );
 define( 'WCSEN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WCSEN_PLUGIN_DIR', untrailingslashit( dirname( WCSEN_PLUGIN ) ) );
@@ -35,61 +34,11 @@ function wcsen_load_textdomain()
 }
 
 
-if ( function_exists( 'cmk_fs' ) ) {
-    cmk_fs()->set_basename( false, __FILE__ );
-} else {
-    // DO NOT REMOVE THIS IF, IT IS ESSENTIAL FOR THE `function_exists` CALL ABOVE TO PROPERLY WORK.
-    
-    if ( !function_exists( 'cmk_fs' ) ) {
-        /**
-         * Create a helper function for easy SDK access.
-         *
-         * @return function Dynamic init.
-         */
-        function cmk_fs()
-        {
-            global  $cmk_fs ;
-            
-            if ( !isset( $cmk_fs ) ) {
-                // Include Freemius SDK.
-                require_once dirname( __FILE__ ) . '/vendor/freemius/wordpress-sdk/start.php';
-                $cmk_fs = fs_dynamic_init( array(
-                    'id'             => '7463',
-                    'slug'           => 'sync-ecommerce-neo',
-                    'premium_slug'   => 'sync-ecommerce-neo-premium',
-                    'type'           => 'plugin',
-                    'public_key'     => 'pk_383663f6536abd96fc0baa8081b21',
-                    'is_premium'     => false,
-                    'premium_suffix' => '',
-                    'has_addons'     => false,
-                    'has_paid_plans' => true,
-                    'trial'          => array(
-                    'days'               => 7,
-                    'is_require_payment' => false,
-                ),
-                    'menu'           => array(
-                    'slug'       => 'import_sync-ecommerce-neo',
-                    'first-path' => 'admin.php?page=import_sync-ecommerce-neo&tab=settings',
-                ),
-                    'is_live'        => true,
-                ) );
-            }
-            
-            return $cmk_fs;
-        }
-        
-        // Init Freemius.
-        cmk_fs();
-        // Signal that SDK was initiated.
-        do_action( 'cmk_fs_loaded' );
-    }
-
-}
-
 // Includes files.
 require_once dirname( __FILE__ ) . '/includes/helpers-functions.php';
 require_once dirname( __FILE__ ) . '/includes/class-sync-admin.php';
 require_once dirname( __FILE__ ) . '/includes/class-sync-import.php';
+
 register_activation_hook( __FILE__, 'wcsen_create_db' );
 /**
  * Creates the database

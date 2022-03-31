@@ -39,6 +39,9 @@ WordPress installation and then activate the Plugin from Plugins page.
 == Developers ==
 
 == Changelog ==
+= 1.4.1 =
+*   Removed Freemius.
+
 = 1.4 =
 *   Fix SSL errors from the source API.
 *   Better message errors.
